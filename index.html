@@ -296,33 +296,14 @@
 
     // --- WebRTC Peer Config with TURN/STUN & Debug Mode Enabled ---
     const peerConfig = {
-      secure: true,
-      debug: 2, // Enables detailed console logging for diagnostics
+      debug: 2,
       config: {
         iceServers: [
-          // STUN Servers
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' },
           { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' },
-          
-          // Free Open Relay TURN Servers for Strict NAT/Firewall Traversal
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelay',
-            credential: 'openrelay'
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelay',
-            credential: 'openrelay'
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelay',
-            credential: 'openrelay'
-          }
+          { urls: 'stun:stun4.l.google.com:19302' }
         ]
       }
     };
@@ -438,15 +419,31 @@
         console.log('Joining client initialized. Local Peer ID:', id);
         const targetHostId = 'trac4-' + code;
 
-        // Brief delay allows the signaling server to properly discover the host ID
-        setTimeout(() => {
-          console.log('Attempting connection to host:', targetHostId);
+        let attempts = 0;
+        const connectToHost = () => {
+          attempts++;
+          console.log(`Attempting connection to host (Attempt ${attempts}):`, targetHostId);
+          
           hostConn = peer.connect(targetHostId, { 
             reliable: true,
             serialization: 'json'
           });
 
+          // Timeout to retry if data channel fails to open
+          const connectTimeout = setTimeout(() => {
+            if (hostConn && !hostConn.open && attempts < 3) {
+              console.warn('Connection timed out, retrying...');
+              hostConn.close();
+              connectToHost();
+            } else if (attempts >= 3) {
+              alert('Could not establish data channel with host. Verify room code and try again.');
+              btnJoin.disabled = false;
+              btnJoin.textContent = 'Join';
+            }
+          }, 4000);
+
           hostConn.on('open', () => {
+            clearTimeout(connectTimeout);
             console.log('Successfully connected to host!');
             roomCode = code;
             btnJoin.disabled = false;
@@ -456,17 +453,22 @@
           hostConn.on('data', (data) => handleNetworkMessage(data));
 
           hostConn.on('error', (err) => {
+            clearTimeout(connectTimeout);
             console.error('Client Connection Error:', err);
-            alert('Could not connect to host. Make sure the host has created the room.');
-            btnJoin.disabled = false;
-            btnJoin.textContent = 'Join';
+            if (attempts >= 3) {
+              alert('Could not connect to host. Make sure the host has created the room.');
+              btnJoin.disabled = false;
+              btnJoin.textContent = 'Join';
+            }
           });
 
           hostConn.on('close', () => {
-            alert('Disconnected from host.');
-            location.reload();
+            console.log('Connection to host closed.');
           });
-        }, 500);
+        };
+
+        // Initiate connection once signaling setup completes
+        connectToHost();
       });
 
       peer.on('error', (err) => {
