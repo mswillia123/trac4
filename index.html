@@ -293,7 +293,7 @@
       }
     };
 
-    // --- Updated WebRTC Peer Config with Free TURN + STUN Fallbacks ---
+    // --- WebRTC Peer Config with TURN/STUN & Debug Mode Enabled ---
     const peerConfig = {
       secure: true,
       debug: 2, // Enables detailed console logging for diagnostics
@@ -306,7 +306,7 @@
           { urls: 'stun:stun3.l.google.com:19302' },
           { urls: 'stun:stun4.l.google.com:19302' },
           
-          // Free Open Relay TURN Servers for NAT/Firewall Traversal
+          // Free Open Relay TURN Servers for Strict NAT/Firewall Traversal
           {
             urls: 'turn:openrelay.metered.ca:80',
             username: 'openrelay',
@@ -363,6 +363,7 @@
 
       document.querySelectorAll('.host-only').forEach(el => el.style.display = 'flex');
 
+      if (peer) peer.destroy();
       peer = new Peer('trac4-' + roomCode, peerConfig);
 
       peer.on('open', (id) => {
@@ -429,40 +430,47 @@
       isHost = false;
       document.querySelectorAll('.host-only').forEach(el => el.style.display = 'none');
 
+      if (peer) peer.destroy();
       peer = new Peer(peerConfig);
 
       peer.on('open', (id) => {
         console.log('Joining client initialized. Local Peer ID:', id);
         const targetHostId = 'trac4-' + code;
-        console.log('Attempting to connect to host:', targetHostId);
 
-        hostConn = peer.connect(targetHostId, { reliable: true });
+        // Brief delay allows the signaling server to properly discover the host ID
+        setTimeout(() => {
+          console.log('Attempting connection to host:', targetHostId);
+          hostConn = peer.connect(targetHostId, { 
+            reliable: true,
+            serialization: 'json'
+          });
 
-        hostConn.on('open', () => {
-          console.log('Connected to host successfully!');
-          roomCode = code;
-          btnJoin.disabled = false;
-          btnJoin.textContent = 'Join';
-        });
+          hostConn.on('open', () => {
+            console.log('Successfully connected to host!');
+            roomCode = code;
+            btnJoin.disabled = false;
+            btnJoin.textContent = 'Join';
+          });
 
-        hostConn.on('data', (data) => handleNetworkMessage(data));
+          hostConn.on('data', (data) => handleNetworkMessage(data));
 
-        hostConn.on('error', (err) => {
-          console.error('Client Host Connection Error:', err);
-          alert('Failed to connect to host: ' + err);
-          btnJoin.disabled = false;
-          btnJoin.textContent = 'Join';
-        });
+          hostConn.on('error', (err) => {
+            console.error('Client Connection Error:', err);
+            alert('Could not connect to host. Make sure the host has created the room.');
+            btnJoin.disabled = false;
+            btnJoin.textContent = 'Join';
+          });
 
-        hostConn.on('close', () => {
-          alert('Disconnected from host.');
-          location.reload();
-        });
+          hostConn.on('close', () => {
+            alert('Disconnected from host.');
+            location.reload();
+          });
+        }, 500);
       });
 
       peer.on('error', (err) => {
         console.error('PeerJS Client Error:', err);
-        alert('Connection Failed: Could not find room "' + code + '". Check code and try again.\n(' + err.type + ')');
+        alert('Connection error (' + err.type + '). Please verify the room code and try again.');
         btnJoin.disabled = false;
         btnJoin.textContent = 'Join';
       });
