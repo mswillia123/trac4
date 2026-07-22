@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hex Mapper - Multi-Player</title>
+  <title>Trac4</title>
   <!-- PeerJS Library -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     :root {
-      --bg-color: #1a1a1a;
-      --panel-bg: #2a2a2a;
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --border-color: #333333;
       --text-color: #e0e0e0;
-      --accent-color: #4a7a96;
-      --accent-hover: #5a8aa6;
-      --border-color: #444444;
+      --accent-color: #0088cc;
+      --accent-hover: #00a0f0;
+      --player1-color: #e74c3c;
+      --player2-color: #f1c40f;
     }
 
     body {
@@ -21,220 +23,226 @@
       padding: 0;
       background-color: var(--bg-color);
       color: var(--text-color);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    #sidebar {
-      width: 320px;
-      background-color: var(--panel-bg);
-      border-right: 1px solid var(--border-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       flex-direction: column;
-      padding: 15px;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-top: 20px;
+      margin-bottom: 5px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 600px;
+      padding: 20px;
       box-sizing: border-box;
-      gap: 15px;
-      z-index: 10;
     }
 
-    .panel-section {
-      background: rgba(0, 0, 0, 0.2);
+    .panel {
+      background-color: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 12px;
+      border-radius: 8px;
+      padding: 15px 20px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
-    .panel-section h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 1rem;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 5px;
-    }
-
-    .control-group {
+    .net-controls {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    label {
-      font-size: 0.85rem;
-      color: #aaa;
-    }
-
-    input[type="text"], select, button {
-      background: #333;
-      border: 1px solid var(--border-color);
-      color: #fff;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-
-    button {
-      background: var(--accent-color);
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-
-    button:hover {
-      background: var(--accent-hover);
-    }
-
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
+      gap: 12px;
     }
 
     .row {
       display: flex;
-      gap: 8px;
+      gap: 10px;
+      align-items: center;
     }
 
     .row > * {
       flex: 1;
     }
 
-    #canvas-container {
-      flex: 1;
-      position: relative;
-      background-color: #111;
-      overflow: hidden;
-      cursor: grab;
+    input[type="text"], button {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background-color: #2a2a2a;
+      color: #fff;
+      font-size: 1rem;
     }
 
-    #canvas-container:active {
-      cursor: grabbing;
-    }
-
-    canvas {
-      display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    #connection-status {
-      font-size: 0.85rem;
-      font-weight: bold;
-      padding: 4px 8px;
-      border-radius: 4px;
+    input[type="text"] {
+      text-transform: uppercase;
+      letter-spacing: 2px;
       text-align: center;
+      font-weight: bold;
+    }
+
+    button {
+      background-color: var(--accent-color);
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: var(--accent-hover);
+    }
+
+    button:disabled {
+      background-color: #444;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    #status-badge {
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 6px 12px;
+      border-radius: 4px;
       margin-top: 5px;
     }
 
-    .status-disconnected { background: #622; color: #f88; }
-    .status-connected { background: #262; color: #8f8; }
-    .status-hosting { background: #246; color: #8cf; }
+    .status-off { background-color: #422; color: #f88; }
+    .status-on { background-color: #242; color: #8f8; }
+    .status-wait { background-color: #442; color: #ff8; }
 
-    #room-display {
+    #room-code-display {
       font-family: monospace;
-      font-size: 1.2rem;
-      letter-spacing: 2px;
+      font-size: 1.4rem;
+      letter-spacing: 4px;
       text-align: center;
       background: #111;
-      padding: 6px;
+      padding: 8px;
       border-radius: 4px;
       border: 1px dashed var(--accent-color);
       user-select: all;
     }
+
+    /* Game Board Layout */
+    #board-container {
+      position: relative;
+      margin-top: 10px;
+    }
+
+    canvas {
+      background-color: #1a1a24;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: block;
+    }
+
+    #game-info {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .player-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .p1-dot { background-color: var(--player1-color); }
+    .p2-dot { background-color: var(--player2-color); }
   </style>
 </head>
 <body>
 
-  <div id="sidebar">
-    <h2>Hex Mapper</h2>
+  <h1>Trac4</h1>
 
-    <!-- Networking Panel -->
-    <div class="panel-section">
-      <h3>Multiplayer Settings</h3>
-      
-      <div id="connection-status" class="status-disconnected">Disconnected</div>
+  <div class="container">
+    
+    <!-- Networking / Matchmaking Panel -->
+    <div class="panel">
+      <div class="net-controls">
+        <div id="status-badge" class="status-off">Offline</div>
 
-      <div class="control-group" style="margin-top: 10px;">
-        <button id="btnHost">Host New Game</button>
-      </div>
-
-      <div id="host-info" style="display: none;" class="control-group">
-        <label>Room Code (Share with players):</label>
-        <div id="room-display">----</div>
-      </div>
-
-      <hr style="border-color: var(--border-color); margin: 10px 0;">
-
-      <div class="control-group">
-        <label for="inputRoomCode">Join Existing Room:</label>
         <div class="row">
-          <input type="text" id="inputRoomCode" placeholder="CODE" maxlength="4" style="text-transform: uppercase;">
-          <button id="btnJoin">Join</button>
+          <button id="btnHost">Host New Game</button>
+        </div>
+
+        <div id="host-room-box" style="display: none;" class="row">
+          <span style="font-size: 0.9rem; color: #aaa;">Room Code:</span>
+          <div id="room-code-display">----</div>
+        </div>
+
+        <hr style="border-color: var(--border-color); margin: 5px 0; width: 100%;">
+
+        <div class="row">
+          <input type="text" id="inputRoomCode" placeholder="CODE" maxlength="4">
+          <button id="btnJoin">Join Room</button>
         </div>
       </div>
     </div>
 
-    <!-- Map Tools Panel -->
-    <div class="panel-section">
-      <h3>Map Tools</h3>
-      <div class="control-group">
-        <label for="toolSelect">Active Tool:</label>
-        <select id="toolSelect">
-          <option value="select">Select / Move View</option>
-          <option value="paint">Paint Terrain</option>
-          <option value="clear">Clear Tile</option>
-        </select>
+    <!-- Game Display Panel -->
+    <div class="panel" style="display: flex; flex-direction: column; align-items: center;">
+      <div id="game-info">
+        <div class="player-indicator"><span class="dot p1-dot"></span> P1 (Host)</div>
+        <div id="turn-display">Waiting for players...</div>
+        <div class="player-indicator"><span class="dot p2-dot"></span> P2 (Joiner)</div>
       </div>
-      <div class="control-group">
-        <label for="terrainSelect">Terrain Type:</label>
-        <select id="terrainSelect">
-          <option value="#2e5a27">Plains (Green)</option>
-          <option value="#1c3b18">Forest (Dark Green)</option>
-          <option value="#5a5a5a">Mountains (Grey)</option>
-          <option value="#2b4c6f">Water (Blue)</option>
-          <option value="#8c764d">Desert (Yellow/Brown)</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <button id="btnClearMap" class="host-only">Clear Entire Map</button>
-      </div>
-    </div>
-  </div>
 
-  <div id="canvas-container">
-    <canvas id="mapCanvas"></canvas>
+      <div id="board-container">
+        <canvas id="trac4Canvas" width="400" height="400"></canvas>
+      </div>
+
+      <button id="btnReset" style="margin-top: 15px; width: 100%; display: none;">Reset Game</button>
+    </div>
+
   </div>
 
   <script>
-    // --- Application State ---
-    const HEX_RADIUS = 30;
-    const MAP_WIDTH = 20;
-    const MAP_HEIGHT = 15;
+    // --- Game Logic State ---
+    const GRID_SIZE = 4; // 4x4 Grid for Trac4
+    const canvas = document.getElementById('trac4Canvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = canvas.width / GRID_SIZE;
 
-    let canvas = document.getElementById('mapCanvas');
-    let ctx = canvas.getContext('2d');
-    let container = document.getElementById('canvas-container');
+    let gameState = {
+      board: Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0)), // 0: empty, 1: P1, 2: P2
+      turn: 1, // 1 or 2
+      winner: null
+    };
 
-    let cameraOffset = { x: 0, y: 0 };
-    let isDragging = false;
-    let dragStart = { x: 0, y: 0 };
-
-    // Hex Grid Data: Keyed by "col,row" -> { terrainColor }
-    let hexData = {};
+    let myPlayerNumber = 0; // 1 for Host, 2 for Client, 0 for Spectator/Offline
 
     // --- Networking State ---
     let peer = null;
     let hostConn = null;
-    let clientConns = []; // Used by host to keep track of joined players
+    let clientConn = null;
     let isHost = false;
-    let roomCode = '';
+    let currentRoomCode = '';
 
-    // PeerJS Configuration with fallback STUN + TURN servers
+    // Robust PeerJS ICE Configuration with STUN + OpenRelay TURN Fallbacks
     const peerConfig = {
       secure: true,
-      debug: 2, // Output detailed connection details in F12 console
+      debug: 2, // Displays WebRTC handshake progress in F12 Console
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
@@ -258,22 +266,13 @@
     const btnHost = document.getElementById('btnHost');
     const btnJoin = document.getElementById('btnJoin');
     const inputRoomCode = document.getElementById('inputRoomCode');
-    const hostInfo = document.getElementById('host-info');
-    const roomDisplay = document.getElementById('room-display');
-    const connectionStatus = document.getElementById('connection-status');
-    const toolSelect = document.getElementById('toolSelect');
-    const terrainSelect = document.getElementById('terrainSelect');
-    const btnClearMap = document.getElementById('btnClearMap');
+    const hostRoomBox = document.getElementById('host-room-box');
+    const roomCodeDisplay = document.getElementById('room-code-display');
+    const statusBadge = document.getElementById('status-badge');
+    const turnDisplay = document.getElementById('turn-display');
+    const btnReset = document.getElementById('btnReset');
 
-    // --- Canvas Resize & Initialization ---
-    function resizeCanvas() {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-      drawMap();
-    }
-    window.addEventListener('resize', resizeCanvas);
-
-    // --- Networking Functions ---
+    // --- Helper Utility Functions ---
     function generateRoomCode() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let result = '';
@@ -284,51 +283,54 @@
     }
 
     function setStatus(text, className) {
-      connectionStatus.textContent = text;
-      connectionStatus.className = className;
+      statusBadge.textContent = text;
+      statusBadge.className = className;
     }
 
-    // Host Room Initialization
+    // --- Host Matchmaking Setup ---
     btnHost.addEventListener('click', () => {
-      roomCode = generateRoomCode();
-      const peerId = 'trac4-' + roomCode;
+      currentRoomCode = generateRoomCode();
+      const targetPeerId = 'trac4-' + currentRoomCode;
 
       if (peer) peer.destroy();
-      peer = new Peer(peerId, peerConfig);
+      peer = new Peer(targetPeerId, peerConfig);
 
       btnHost.disabled = true;
       btnJoin.disabled = true;
-      setStatus('Initializing Host...', 'status-disconnected');
+      setStatus('Registering Host Room...', 'status-wait');
 
       peer.on('open', (id) => {
         isHost = true;
-        roomDisplay.textContent = roomCode;
-        hostInfo.style.display = 'block';
-        setStatus(`Hosting Room: ${roomCode}`, 'status-hosting');
-        console.log('Host initialized with Peer ID:', id);
+        myPlayerNumber = 1;
+        roomCodeDisplay.textContent = currentRoomCode;
+        hostRoomBox.style.display = 'flex';
+        setStatus(`Hosting Room [${currentRoomCode}] - Waiting for Player 2...`, 'status-wait');
+        turnDisplay.textContent = 'Waiting for P2...';
+        console.log('Host initialized with ID:', id);
       });
 
       peer.on('connection', (conn) => {
-        console.log('Client attempting to connect:', conn.peer);
+        console.log('Client connected:', conn.peer);
+        clientConn = conn;
 
-        conn.on('open', () => {
-          clientConns.push(conn);
-          console.log('Client connected successfully. Sending full map state.');
-          // Sync existing map state to newly joined client
-          conn.send({ type: 'SYNC_MAP', data: hexData });
+        clientConn.on('open', () => {
+          setStatus(`Connected to Player 2! (Room ${currentRoomCode})`, 'status-on');
+          btnReset.style.display = 'block';
+          // Send initial state to joining player
+          syncGameState();
         });
 
-        conn.on('data', (data) => {
-          handleNetworkMessage(data, conn);
+        clientConn.on('data', (data) => {
+          handleNetworkPayload(data);
         });
 
-        conn.on('close', () => {
-          console.log('Client disconnected:', conn.peer);
-          clientConns = clientConns.filter(c => c !== conn);
+        clientConn.on('close', () => {
+          setStatus('Player 2 Disconnected', 'status-off');
+          turnDisplay.textContent = 'P2 Left Game';
         });
 
-        conn.on('error', (err) => {
-          console.error('Host connection error with client:', err);
+        clientConn.on('error', (err) => {
+          console.error('Host Connection Error:', err);
         });
       });
 
@@ -337,39 +339,39 @@
         alert('Hosting Error: ' + err.type);
         btnHost.disabled = false;
         btnJoin.disabled = false;
-        setStatus('Disconnected', 'status-disconnected');
+        setStatus('Offline', 'status-off');
       });
     });
 
-    // Client Join Room Initialization
+    // --- Joiner Matchmaking Setup ---
     btnJoin.addEventListener('click', () => {
       const code = inputRoomCode.value.trim().toUpperCase();
-      if (code.length !== 4) return alert('Enter a valid 4-character Room Code');
+      if (code.length !== 4) return alert('Please enter a 4-character Room Code');
 
       btnJoin.disabled = true;
       btnHost.disabled = true;
       btnJoin.textContent = 'Connecting...';
-      setStatus('Connecting to Host...', 'status-disconnected');
+      setStatus('Connecting to Host...', 'status-wait');
 
       isHost = false;
-      document.querySelectorAll('.host-only').forEach(el => el.style.display = 'none');
+      myPlayerNumber = 2;
 
       if (peer) peer.destroy();
       peer = new Peer(peerConfig);
 
-      // 10-Second Connection Timeout Threshold
+      // 10-Second Connection Timeout Guard
       let connectionTimeout = setTimeout(() => {
-        if (btnJoin.disabled && !hostConn) {
-          alert('Connection timed out. Check the Room Code or ensure the Host is still online.');
+        if (btnJoin.disabled && (!hostConn || !hostConn.open)) {
+          alert('Connection timed out. Verify room code or ask the Host to recreate the room.');
           btnJoin.disabled = false;
           btnHost.disabled = false;
-          btnJoin.textContent = 'Join';
-          setStatus('Disconnected', 'status-disconnected');
+          btnJoin.textContent = 'Join Room';
+          setStatus('Offline', 'status-off');
         }
       }, 10000);
 
       peer.on('open', (id) => {
-        console.log('Joining client initialized. Local Peer ID:', id);
+        console.log('Client Peer initialized:', id);
         const targetHostId = 'trac4-' + code;
 
         hostConn = peer.connect(targetHostId, {
@@ -379,29 +381,29 @@
 
         hostConn.on('open', () => {
           clearTimeout(connectionTimeout);
-          console.log('Connected to host successfully!');
-          roomCode = code;
+          console.log('Successfully connected to Host!');
+          currentRoomCode = code;
           btnJoin.disabled = false;
-          btnJoin.textContent = 'Join';
-          setStatus(`Connected to Room: ${code}`, 'status-connected');
+          btnJoin.textContent = 'Join Room';
+          setStatus(`Connected to Room [${code}]!`, 'status-on');
         });
 
         hostConn.on('data', (data) => {
-          handleNetworkMessage(data);
+          handleNetworkPayload(data);
         });
 
         hostConn.on('error', (err) => {
           clearTimeout(connectionTimeout);
-          console.error('Client Host Connection Error:', err);
+          console.error('Client Connection Error:', err);
           alert('Failed to connect to host: ' + err);
           btnJoin.disabled = false;
           btnHost.disabled = false;
-          btnJoin.textContent = 'Join';
-          setStatus('Disconnected', 'status-disconnected');
+          btnJoin.textContent = 'Join Room';
+          setStatus('Offline', 'status-off');
         });
 
         hostConn.on('close', () => {
-          alert('Disconnected from host.');
+          alert('Host closed the connection.');
           location.reload();
         });
       });
@@ -411,184 +413,187 @@
         console.error('PeerJS Client Error:', err);
 
         if (err.type === 'peer-unavailable') {
-          alert(`Room "${code}" not found. Double-check the code or ensure the Host is actively online.`);
+          alert(`Room "${code}" not found. Double check the code or ensure Host is online.`);
         } else {
-          alert('Connection Failed (' + err.type + '). Please try again.');
+          alert('Connection Failed (' + err.type + ').');
         }
 
         btnJoin.disabled = false;
         btnHost.disabled = false;
-        btnJoin.textContent = 'Join';
-        setStatus('Disconnected', 'status-disconnected');
+        btnJoin.textContent = 'Join Room';
+        setStatus('Offline', 'status-off');
       });
     });
 
-    // Handle Network Payloads
-    function handleNetworkMessage(msg, senderConn = null) {
-      if (!msg || !msg.type) return;
+    // --- Network Messaging ---
+    function handleNetworkPayload(data) {
+      if (!data || !data.type) return;
 
-      switch (msg.type) {
-        case 'SYNC_MAP':
-          hexData = msg.data;
-          drawMap();
+      switch (data.type) {
+        case 'SYNC_STATE':
+          gameState = data.state;
+          updateTurnDisplay();
+          drawBoard();
           break;
 
-        case 'UPDATE_TILE':
-          hexData[msg.key] = msg.value;
-          drawMap();
-          // If host receives update from a client, broadcast to all other clients
+        case 'MAKE_MOVE':
           if (isHost) {
-            broadcastNetworkMessage(msg, senderConn);
+            processMove(data.row, data.col, data.player);
           }
           break;
 
-        case 'CLEAR_MAP':
-          hexData = {};
-          drawMap();
-          if (isHost) {
-            broadcastNetworkMessage(msg, senderConn);
-          }
+        case 'RESET_GAME':
+          resetGameState();
           break;
       }
     }
 
-    function broadcastNetworkMessage(msg, excludeConn = null) {
-      clientConns.forEach(conn => {
-        if (conn !== excludeConn && conn.open) {
-          conn.send(msg);
+    function syncGameState() {
+      const payload = { type: 'SYNC_STATE', state: gameState };
+      if (isHost && clientConn && clientConn.open) {
+        clientConn.send(payload);
+      } else if (!isHost && hostConn && hostConn.open) {
+        hostConn.send(payload);
+      }
+      updateTurnDisplay();
+      drawBoard();
+    }
+
+    // --- Game Logic & Interactions ---
+    function updateTurnDisplay() {
+      if (gameState.winner) {
+        if (gameState.winner === 'DRAW') {
+          turnDisplay.textContent = "Game Draw!";
+        } else {
+          turnDisplay.textContent = `Player ${gameState.winner} Wins!`;
         }
-      });
-    }
-
-    function sendNetworkMessage(msg) {
-      if (isHost) {
-        broadcastNetworkMessage(msg);
-      } else if (hostConn && hostConn.open) {
-        hostConn.send(msg);
-      }
-    }
-
-    // --- Hex Grid Geometry Helpers ---
-    function getHexCorners(center) {
-      let corners = [];
-      for (let i = 0; i < 6; i++) {
-        let angleDeg = 60 * i - 30; // Pointy-topped hexes
-        let angleRad = Math.PI / 180 * angleDeg;
-        corners.push({
-          x: center.x + HEX_RADIUS * Math.cos(angleRad),
-          y: center.y + HEX_RADIUS * Math.sin(angleRad)
-        });
-      }
-      return corners;
-    }
-
-    function getHexCenter(col, row) {
-      let width = Math.sqrt(3) * HEX_RADIUS;
-      let height = 2 * HEX_RADIUS;
-      let x = col * width + (row % 2) * (width / 2) + cameraOffset.x + canvas.width / 2 - 300;
-      let y = row * (height * 0.75) + cameraOffset.y + canvas.height / 2 - 200;
-      return { x, y };
-    }
-
-    function pixelToHex(x, y) {
-      // Approximate hex picker for grid selection
-      let width = Math.sqrt(3) * HEX_RADIUS;
-      let height = 2 * HEX_RADIUS;
-
-      let adjustedX = x - (cameraOffset.x + canvas.width / 2 - 300);
-      let adjustedY = y - (cameraOffset.y + canvas.height / 2 - 200);
-
-      let row = Math.round(adjustedY / (height * 0.75));
-      let col = Math.round((adjustedX - (row % 2) * (width / 2)) / width);
-
-      return { col, row };
-    }
-
-    // --- Canvas Rendering ---
-    function drawHex(center, color = '#222222', strokeColor = '#444444') {
-      let corners = getHexCorners(center);
-
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 6; i++) {
-        ctx.lineTo(corners[i].x, corners[i].y);
-      }
-      ctx.closePath();
-
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    function drawMap() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      for (let r = 0; r < MAP_HEIGHT; r++) {
-        for (let c = 0; c < MAP_WIDTH; c++) {
-          let center = getHexCenter(c, r);
-          let key = `${c},${r}`;
-          let tile = hexData[key];
-          let color = (tile && tile.terrainColor) ? tile.terrainColor : '#222222';
-
-          drawHex(center, color);
-        }
-      }
-    }
-
-    // --- User Interaction ---
-    container.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      if (toolSelect.value === 'select' || e.button === 1) { // Middle click or select mode
-        isDragging = true;
-        dragStart = { x: e.clientX - cameraOffset.x, y: e.clientY - cameraOffset.y };
         return;
       }
 
-      const { col, row } = pixelToHex(mouseX, mouseY);
-      if (col >= 0 && col < MAP_WIDTH && row >= 0 && row < MAP_HEIGHT) {
-        const key = `${col},${row}`;
+      if (gameState.turn === myPlayerNumber) {
+        turnDisplay.textContent = "Your Turn!";
+      } else {
+        turnDisplay.textContent = `Player ${gameState.turn}'s Turn`;
+      }
+    }
 
-        if (toolSelect.value === 'paint') {
-          const color = terrainSelect.value;
-          hexData[key] = { terrainColor: color };
-          drawMap();
-          sendNetworkMessage({ type: 'UPDATE_TILE', key: key, value: hexData[key] });
-        } else if (toolSelect.value === 'clear') {
-          delete hexData[key];
-          drawMap();
-          sendNetworkMessage({ type: 'UPDATE_TILE', key: key, value: null });
+    function processMove(row, col, player) {
+      if (gameState.board[row][col] !== 0 || gameState.winner !== null) return;
+      if (gameState.turn !== player) return;
+
+      gameState.board[row][col] = player;
+      
+      if (checkWin(player)) {
+        gameState.winner = player;
+      } else if (checkDraw()) {
+        gameState.winner = 'DRAW';
+      } else {
+        gameState.turn = player === 1 ? 2 : 1;
+      }
+
+      syncGameState();
+    }
+
+    function checkWin(p) {
+      const b = gameState.board;
+      // Check Rows & Columns
+      for (let i = 0; i < GRID_SIZE; i++) {
+        if (b[i][0] === p && b[i][1] === p && b[i][2] === p && b[i][3] === p) return true;
+        if (b[0][i] === p && b[1][i] === p && b[2][i] === p && b[3][i] === p) return true;
+      }
+      // Check Diagonals
+      if (b[0][0] === p && b[1][1] === p && b[2][2] === p && b[3][3] === p) return true;
+      if (b[0][3] === p && b[1][2] === p && b[2][1] === p && b[3][0] === p) return true;
+
+      return false;
+    }
+
+    function checkDraw() {
+      return gameState.board.every(row => row.every(cell => cell !== 0));
+    }
+
+    function resetGameState() {
+      gameState = {
+        board: Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0)),
+        turn: 1,
+        winner: null
+      };
+      syncGameState();
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (gameState.winner !== null) return;
+      if (gameState.turn !== myPlayerNumber) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const col = Math.floor(x / cellSize);
+      const row = Math.floor(y / cellSize);
+
+      if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+        if (isHost) {
+          processMove(row, col, 1);
+        } else {
+          // Send requested move to host for verification
+          if (hostConn && hostConn.open) {
+            hostConn.send({ type: 'MAKE_MOVE', row: row, col: col, player: 2 });
+          }
         }
       }
     });
 
-    window.addEventListener('mousemove', (e) => {
-      if (isDragging) {
-        cameraOffset.x = e.clientX - dragStart.x;
-        cameraOffset.y = e.clientY - dragStart.y;
-        drawMap();
+    btnReset.addEventListener('click', () => {
+      if (isHost) {
+        resetGameState();
       }
     });
 
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
+    // --- Rendering ---
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    btnClearMap.addEventListener('click', () => {
-      if (!isHost) return;
-      if (confirm('Are you sure you want to clear the whole map?')) {
-        hexData = {};
-        drawMap();
-        sendNetworkMessage({ type: 'CLEAR_MAP' });
+      // Draw Grid Lines
+      ctx.strokeStyle = '#333333';
+      ctx.lineWidth = 2;
+      for (let i = 1; i < GRID_SIZE; i++) {
+        // Vertical
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, canvas.height);
+        ctx.stroke();
+
+        // Horizontal
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(canvas.width, i * cellSize);
+        ctx.stroke();
       }
-    });
 
-    // --- Initial Setup ---
-    resizeCanvas();
+      // Draw Pieces
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+          const val = gameState.board[r][c];
+          if (val !== 0) {
+            const centerX = c * cellSize + cellSize / 2;
+            const centerY = r * cellSize + cellSize / 2;
+            const radius = cellSize * 0.35;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fillStyle = val === 1 ? '#e74c3c' : '#f1c40f';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Initial render call
+    drawBoard();
   </script>
 </body>
 </html>
