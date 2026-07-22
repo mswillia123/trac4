@@ -3,434 +3,401 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trac 4 - P2P Simultaneous Speed Match</title>
+  <title>Hex Mapper - Multi-Player</title>
+  <!-- PeerJS Library -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-color: #1a1a1a;
+      --panel-bg: #2a2a2a;
+      --text-color: #e0e0e0;
+      --accent-color: #4a7a96;
+      --accent-hover: #5a8aa6;
+      --border-color: #444444;
+    }
+
     body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f0f12;
-      color: #fff;
+      display: flex;
+      height: 100vh;
       overflow: hidden;
     }
-    #canvas-container { width: 100vw; height: 100vh; display: block; }
 
-    /* Lobby Overlay */
-    #lobby-overlay {
-      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(15, 15, 18, 0.92); backdrop-filter: blur(10px);
-      display: flex; justify-content: center; align-items: center; z-index: 100;
-    }
-    .lobby-card {
-      background: #1e2126; border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 32px; border-radius: 16px; width: 380px; text-align: center;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-    }
-    .lobby-card h2 { font-size: 1.8rem; color: #0000FF; margin-bottom: 8px; letter-spacing: 2px; }
-    .lobby-card p { font-size: 0.85rem; color: #aaa; margin-bottom: 24px; }
-    .lobby-options { display: flex; flex-direction: column; gap: 14px; }
-    .input-group { display: flex; gap: 8px; }
-    input[type=text] {
-      flex: 1; background: #111113; border: 1px solid #444; color: #fff;
-      padding: 10px 14px; border-radius: 8px; font-size: 1rem;
-      text-transform: uppercase; letter-spacing: 2px; text-align: center;
-    }
-    button, select {
-      background: #e63946; color: white; border: none; padding: 10px 18px;
-      border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s, transform 0.1s;
-    }
-    select {
-      background: #2a2d34; border: 1px solid rgba(255,255,255,0.2); color: white;
-    }
-    button:hover { background: #d62828; }
-    button:active { transform: scale(0.96); }
-    button.secondary { background: #0000FF; }
-    button.secondary:hover { background: #0000cc; }
-    button.ready-active { background: #00FF00 !important; color: #000 !important; }
-
-    /* UI Panel Overlay */
-    #ui-panel {
-      position: absolute; top: 50%; right: 20px; transform: translateY(-50%);
-      background: rgba(20, 20, 25, 0.92); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15); padding: 20px 14px;
-      border-radius: 12px; display: flex; flex-direction: column; gap: 14px; align-items: stretch;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6); z-index: 10;
-    }
-    #heading { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
-    #heading h1 { font-size: 1.5rem; letter-spacing: 2px; color: #0000FF; }
-    #heading p { font-size: 0.85rem; color: #aaa; }
-
-    .badge { font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #333; }
-    .badge.room { color: #0000FF; background: rgba(0, 0, 255, 0.2); }
-    .badge.speed { color: #ffb703; background: rgba(255, 183, 3, 0.2); }
-    
-    .host-only { display: none; flex-direction: column; gap: 10px; width: 100%; }
-
-    #win-banner {
-      display: none;
-      position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-      padding: 32px 56px; border-radius: 20px;
-      font-size: 2.2rem; font-weight: bold; text-align: center; z-index: 200;
-      box-shadow: 0 15px 50px rgba(0,0,0,0.8); border: 3px solid #fff;
-      color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    #sidebar {
+      width: 320px;
+      background-color: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      box-sizing: border-box;
+      gap: 15px;
+      z-index: 10;
     }
 
-    @keyframes popIn {
-      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    .panel-section {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .panel-section h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 5px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+
+    input[type="text"], select, button {
+      background: #333;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    button {
+      background: var(--accent-color);
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .row > * {
+      flex: 1;
+    }
+
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      background-color: #111;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    #connection-status {
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-align: center;
+      margin-top: 5px;
+    }
+
+    .status-disconnected { background: #622; color: #f88; }
+    .status-connected { background: #262; color: #8f8; }
+    .status-hosting { background: #246; color: #8cf; }
+
+    #room-display {
+      font-family: monospace;
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+      text-align: center;
+      background: #111;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px dashed var(--accent-color);
+      user-select: all;
     }
   </style>
-
-  <!-- External Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-  <div id="win-banner">PLAYER 1 WINS!</div>
+  <div id="sidebar">
+    <h2>Hex Mapper</h2>
 
-  <!-- Lobby Overlay -->
-  <div id="lobby-overlay">
-    <div class="lobby-card">
-      <h2>TRAC 4 P2P</h2>
-      <p>Simultaneous Speed Race</p>
-      <div class="lobby-options">
-        <button id="btn-host" class="secondary">Host New Game</button>
-        <div style="color: #666; font-size: 0.8rem; margin: 4px 0;">— OR JOIN A ROOM —</div>
-        <div class="input-group">
-          <input type="text" id="input-room-code" placeholder="ROOM CODE" maxlength="4">
-          <button id="btn-join">Join</button>
+    <!-- Networking Panel -->
+    <div class="panel-section">
+      <h3>Multiplayer Settings</h3>
+      
+      <div id="connection-status" class="status-disconnected">Disconnected</div>
+
+      <div class="control-group" style="margin-top: 10px;">
+        <button id="btnHost">Host New Game</button>
+      </div>
+
+      <div id="host-info" style="display: none;" class="control-group">
+        <label>Room Code (Share with players):</label>
+        <div id="room-display">----</div>
+      </div>
+
+      <hr style="border-color: var(--border-color); margin: 10px 0;">
+
+      <div class="control-group">
+        <label for="inputRoomCode">Join Existing Room:</label>
+        <div class="row">
+          <input type="text" id="inputRoomCode" placeholder="CODE" maxlength="4" style="text-transform: uppercase;">
+          <button id="btnJoin">Join</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Map Tools Panel -->
+    <div class="panel-section">
+      <h3>Map Tools</h3>
+      <div class="control-group">
+        <label for="toolSelect">Active Tool:</label>
+        <select id="toolSelect">
+          <option value="select">Select / Move View</option>
+          <option value="paint">Paint Terrain</option>
+          <option value="clear">Clear Tile</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="terrainSelect">Terrain Type:</label>
+        <select id="terrainSelect">
+          <option value="#2e5a27">Plains (Green)</option>
+          <option value="#1c3b18">Forest (Dark Green)</option>
+          <option value="#5a5a5a">Mountains (Grey)</option>
+          <option value="#2b4c6f">Water (Blue)</option>
+          <option value="#8c764d">Desert (Yellow/Brown)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <button id="btnClearMap" class="host-only">Clear Entire Map</button>
       </div>
     </div>
   </div>
 
-  <div id="heading">
-    <h1>TRAC 4</h1>
-    <p>Simultaneous Race to Match</p>
-  </div>
-
-  <div id="canvas-container"></div>
-
-  <!-- UI Panel -->
-  <div id="ui-panel">
-    <div style="font-size: 0.8rem; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 2px;">
-      Room: <span id="label-room-code" class="badge room" style="font-size:0.75rem;">----</span><br>
-      Role: <b id="label-my-player" style="font-size:0.75rem;">Player ?</b><br>
-      Status: <span id="label-ready-count" class="badge speed" style="font-size:0.75rem;">0 Joined</span>
-    </div>
-
-    <button id="btn-start" class="secondary" style="width: 100%;">Start (Ready)</button>
-
-    <div class="host-only" id="host-controls-group">
-      <label for="select-level" style="font-size:0.85rem; font-weight:bold;">Level:</label>
-      <select id="select-level" style="width: 100%;">
-        <option value="1">Level 1</option>
-        <option value="2">Level 2</option>
-        <option value="3">Level 3</option>
-        <option value="4" selected>Level 4</option>
-      </select>
-
-      <label for="select-speed" style="font-size:0.85rem; font-weight:bold;">Speed:</label>
-      <select id="select-speed" style="width: 100%;">
-        <option value="0.00314">Slow</option>
-        <option value="0.01047" selected>Normal</option>
-        <option value="0.01745">Fast</option>
-        <option value="0.02618">Speedrun</option>
-      </select>
-      <button id="btn-host-new-game" style="width: 100%;">New Game 🎴</button>
-    </div>
+  <div id="canvas-container">
+    <canvas id="mapCanvas"></canvas>
   </div>
 
   <script>
-    // --- Player Color Definitions & Index Mapping ---
-    // Player 1: Orange, Player 2: Green, Player 3: Yellow, Player 4: Blue
-    const PLAYER_COLORS = [
-      { name: 'Orange', hex: '#ff7700', hexNum: 0xff7700 },
-      { name: 'Green',  hex: '#00FF00', hexNum: 0x00ff00 },
-      { name: 'Yellow', hex: '#FFFF33', hexNum: 0xffff33 },
-      { name: 'Blue',   hex: '#0000FF', hexNum: 0x0000ff }
-    ];
+    // --- Application State ---
+    const HEX_RADIUS = 30;
+    const MAP_WIDTH = 20;
+    const MAP_HEIGHT = 15;
 
-    // --- Enhanced Web Audio Dual Bright Clicks Matching Mechanical Ratchet ---
-    let audioCtx = null;
-    let lastSoundAngle = 0;
-    let clickToggleState = false;
+    let canvas = document.getElementById('mapCanvas');
+    let ctx = canvas.getContext('2d');
+    let container = document.getElementById('canvas-container');
 
-    function playRatchetClick() {
-      try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
+    let cameraOffset = { x: 0, y: 0 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
 
-        const now = audioCtx.currentTime;
-        clickToggleState = !clickToggleState;
+    // Hex Grid Data: Keyed by "col,row" -> { terrainColor }
+    let hexData = {};
 
-        const bufferSize = audioCtx.sampleRate * 0.015;
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1);
-        }
+    // --- Networking State ---
+    let peer = null;
+    let hostConn = null;
+    let clientConns = []; // Used by host to keep track of joined players
+    let isHost = false;
+    let roomCode = '';
 
-        const noise = audioCtx.createBufferSource();
-        noise.buffer = buffer;
-
-        const highpass = audioCtx.createBiquadFilter();
-        highpass.type = 'highpass';
-        highpass.frequency.setValueAtTime(3500, now);
-
-        const noiseGain = audioCtx.createGain();
-        noiseGain.gain.setValueAtTime(0.7, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
-
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine';
-        if (clickToggleState) {
-          osc.frequency.setValueAtTime(4200, now);
-          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.015);
-        } else {
-          osc.frequency.setValueAtTime(3100, now);
-          osc.frequency.exponentialRampToValueAtTime(900, now + 0.015);
-        }
-
-        const oscGain = audioCtx.createGain();
-        oscGain.gain.setValueAtTime(0.5, now);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
-
-        noise.connect(highpass);
-        highpass.connect(noiseGain);
-        noiseGain.connect(audioCtx.destination);
-
-        osc.connect(oscGain);
-        oscGain.connect(audioCtx.destination);
-
-        noise.start(now);
-        osc.start(now);
-
-        noise.stop(now + 0.015);
-        osc.stop(now + 0.015);
-      } catch (e) {}
-    }
-
-    // --- Master Card Catalog Organized by Level, Player Color Index, and 2 Card Options ---
-    // Index 0: Orange, Index 1: Green, Index 2: Yellow, Index 3: Blue
-    const masterCardCatalog = {
-      1: {
-        0: [
-          [2, 0, 1, 3,  1, 4, 5, 0,  0, 5, 3, 1,  4, 1, 0, 2],
-          [5, 1, 0, 4,  0, 2, 3, 1,  1, 3, 2, 0,  2, 0, 1, 5]
-        ],
-        1: [
-          [3, 1, 0, 2,  0, 5, 4, 1,  2, 0, 1, 5,  4, 3, 2, 0],
-          [4, 0, 1, 5,  1, 3, 2, 0,  5, 2, 4, 3,  0, 1, 5, 2]
-        ],
-        2: [
-          [5, 5, 5, 5,  5, 0, 0, 3,  2, 0, 0, 4,  5, 5, 5, 5],
-          [3, 3, 3, 3,  3, 0, 0, 5,  4, 0, 0, 2,  3, 3, 3, 3]
-        ],
-        3: [
-          [0, 2, 3, 1,  4, 1, 0, 5,  1, 5, 2, 0,  3, 0, 1, 4],
-          [1, 4, 5, 0,  2, 0, 3, 1,  0, 2, 1, 4,  5, 3, 0, 2]
-        ]
-      },
-      2: {
-        0: [
-          [0, 2, 0, 3,  4, 0, 5, 0,  0, 2, 0, 3,  4, 0, 5, 0],
-          [5, 4, 5, 4,  2, 0, 0, 3,  2, 0, 0, 3,  5, 4, 5, 4]
-        ],
-        1: [
-          [2, 3, 2, 3,  3, 0, 0, 2,  3, 0, 0, 2,  2, 3, 2, 3],
-          [4, 5, 4, 5,  5, 0, 0, 4,  5, 0, 0, 4,  4, 5, 4, 5]
-        ],
-        2: [
-          [5, 5, 5, 5,  5, 0, 0, 3,  2, 0, 0, 4,  5, 5, 5, 5],
-          [3, 3, 3, 3,  3, 0, 0, 5,  4, 0, 0, 2,  3, 3, 3, 3]
-        ],
-        3: [
-          [1, 1, 1, 1,  2, 0, 0, 4,  3, 0, 0, 5,  1, 1, 1, 1],
-          [4, 4, 4, 4,  4, 0, 0, 2,  5, 0, 0, 3,  4, 4, 4, 4]
-        ]
-      },
-      3: {
-        0: [
-          [0, 1, 2, 3,  5, 4, 1, 0,  1, 0, 5, 4,  2, 3, 0, 1],
-          [4, 5, 3, 2,  1, 0, 2, 3,  0, 1, 4, 5,  3, 2, 1, 0]
-        ],
-        1: [
-          [2, 3, 0, 1,  1, 0, 5, 4,  3, 2, 1, 0,  0, 1, 4, 5],
-          [5, 4, 1, 0,  2, 3, 0, 1,  4, 5, 2, 3,  1, 0, 3, 2]
-        ],
-        2: [
-          [3, 0, 1, 2,  2, 1, 0, 5,  0, 3, 4, 1,  1, 4, 3, 0],
-          [2, 1, 4, 5,  3, 0, 2, 1,  5, 4, 1, 0,  0, 2, 5, 3]
-        ],
-        3: [
-          [1, 2, 3, 0,  0, 1, 4, 5,  2, 3, 0, 1,  5, 0, 1, 4],
-          [3, 0, 2, 1,  4, 5, 3, 2,  1, 2, 5, 4,  0, 3, 2, 1]
-        ]
-      },
-      4: {
-        0: [
-          [2, 3, 0, 1,  0, 1, 4, 5,  1, 2, 5, 0,  3, 4, 1, 2],
-          [4, 5, 1, 2,  3, 0, 2, 1,  0, 3, 4, 5,  2, 1, 0, 3]
-        ],
-        1: [
-          [1, 0, 3, 2,  2, 3, 0, 4,  5, 2, 1, 0,  0, 1, 2, 5],
-          [3, 2, 5, 4,  1, 0, 3, 2,  4, 5, 0, 1,  2, 3, 1, 0]
-        ],
-        2: [
-          [3, 2, 1, 0,  0, 5, 2, 1,  1, 0, 4, 3,  2, 1, 5, 4],
-          [4, 1, 3, 2,  5, 2, 0, 4,  0, 3, 1, 5,  1, 4, 2, 0]
-        ],
-        3: [
-          [0, 3, 2, 1,  1, 2, 5, 0,  4, 1, 0, 3,  5, 0, 1, 2],
-          [5, 4, 0, 3,  2, 1, 3, 0,  1, 0, 2, 4,  3, 5, 4, 1]
-        ]
-      }
-    };
-
-    // --- Explicit WebRTC Peer Config with Public STUN Servers ---
+    // PeerJS Configuration with fallback STUN + TURN servers
     const peerConfig = {
       secure: true,
+      debug: 2, // Output detailed connection details in F12 console
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' }
+          { urls: 'stun:stun2.l.google.com:19302' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelay',
+            credential: 'openrelay'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelay',
+            credential: 'openrelay'
+          }
         ]
       }
     };
 
-    // --- 1. PeerJS WebRTC Setup ---
-    let peer = null;
-    let connections = [];
-    let hostConn = null;
+    // --- DOM Elements ---
+    const btnHost = document.getElementById('btnHost');
+    const btnJoin = document.getElementById('btnJoin');
+    const inputRoomCode = document.getElementById('inputRoomCode');
+    const hostInfo = document.getElementById('host-info');
+    const roomDisplay = document.getElementById('room-display');
+    const connectionStatus = document.getElementById('connection-status');
+    const toolSelect = document.getElementById('toolSelect');
+    const terrainSelect = document.getElementById('terrainSelect');
+    const btnClearMap = document.getElementById('btnClearMap');
 
-    let isHost = false;
-    let myPlayerId = 1;
-    let roomCode = '';
-    let gameWon = false;
-    let isRotating = false;
-    let rotationSpeed = 0.01047;
-    let currentSelectedLevel = 4;
+    // --- Canvas Resize & Initialization ---
+    function resizeCanvas() {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      drawMap();
+    }
+    window.addEventListener('resize', resizeCanvas);
 
-    let playerReadyMap = { 1: false };
-    let cardPatterns = [];
+    // --- Networking Functions ---
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let result = '';
+      for (let i = 0; i < 4; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
 
-    const lobbyOverlay = document.getElementById('lobby-overlay');
-    const inputRoomCode = document.getElementById('input-room-code');
-    const labelRoomCodes = document.querySelectorAll('#label-room-code');
-    const labelMyPlayers = document.querySelectorAll('#label-my-player');
-    const labelReadyCounts = document.querySelectorAll('#label-ready-count');
-    const winBanner = document.getElementById('win-banner');
-    const btnStart = document.getElementById('btn-start');
-    const selectSpeed = document.getElementById('select-speed');
-    const selectLevel = document.getElementById('select-level');
-    const btnJoin = document.getElementById('btn-join');
+    function setStatus(text, className) {
+      connectionStatus.textContent = text;
+      connectionStatus.className = className;
+    }
 
-    function generateCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
+    // Host Room Initialization
+    btnHost.addEventListener('click', () => {
+      roomCode = generateRoomCode();
+      const peerId = 'trac4-' + roomCode;
 
-    document.getElementById('btn-host').addEventListener('click', () => {
-      isHost = true;
-      myPlayerId = 1;
-      roomCode = generateCode();
-      loadGameCardsForLevel(currentSelectedLevel);
+      if (peer) peer.destroy();
+      peer = new Peer(peerId, peerConfig);
 
-      document.querySelectorAll('.host-only').forEach(el => el.style.display = 'flex');
-
-      peer = new Peer('trac4-' + roomCode, peerConfig);
+      btnHost.disabled = true;
+      btnJoin.disabled = true;
+      setStatus('Initializing Host...', 'status-disconnected');
 
       peer.on('open', (id) => {
-        console.log('Host Peer initialized with ID:', id);
-        setupGameLobby();
-        labelMyPlayers.forEach(el => {
-          el.textContent = `Player 1 (${PLAYER_COLORS[0].name})`;
-          el.style.color = PLAYER_COLORS[0].hex;
-        });
-        setCameraPerspective(1);
-        randomizeAllCubes();
-        updateReadyUI();
+        isHost = true;
+        roomDisplay.textContent = roomCode;
+        hostInfo.style.display = 'block';
+        setStatus(`Hosting Room: ${roomCode}`, 'status-hosting');
+        console.log('Host initialized with Peer ID:', id);
       });
 
       peer.on('connection', (conn) => {
-        console.log('New incoming player connection requested...');
-        if (connections.length >= 3) { 
-          console.warn('Room full, rejecting connection.');
-          conn.close(); 
-          return; 
-        }
-        connections.push(conn);
-        const assignedId = connections.length + 1;
-        playerReadyMap[assignedId] = false;
+        console.log('Client attempting to connect:', conn.peer);
 
         conn.on('open', () => {
-          console.log(`Player ${assignedId} successfully connected to host.`);
-          conn.send({
-            type: 'WELCOME',
-            playerId: assignedId,
-            roomCode: roomCode,
-            gameState: getGameState()
-          });
-          broadcastReadyState();
+          clientConns.push(conn);
+          console.log('Client connected successfully. Sending full map state.');
+          // Sync existing map state to newly joined client
+          conn.send({ type: 'SYNC_MAP', data: hexData });
         });
 
-        conn.on('data', (data) => handleNetworkMessage(data));
-
-        conn.on('error', (err) => {
-          console.error('Host connection error:', err);
+        conn.on('data', (data) => {
+          handleNetworkMessage(data, conn);
         });
 
         conn.on('close', () => {
-          console.log(`Connection closed for Player ${assignedId}`);
-          delete playerReadyMap[assignedId];
-          connections = connections.filter(c => c !== conn);
-          broadcastReadyState();
+          console.log('Client disconnected:', conn.peer);
+          clientConns = clientConns.filter(c => c !== conn);
+        });
+
+        conn.on('error', (err) => {
+          console.error('Host connection error with client:', err);
         });
       });
 
       peer.on('error', (err) => {
-        console.error('PeerJS Host Error:', err);
-        alert('Hosting Error: ' + err.type + '\n' + err.message);
+        console.error('Host PeerJS Error:', err);
+        alert('Hosting Error: ' + err.type);
+        btnHost.disabled = false;
+        btnJoin.disabled = false;
+        setStatus('Disconnected', 'status-disconnected');
       });
     });
 
+    // Client Join Room Initialization
     btnJoin.addEventListener('click', () => {
       const code = inputRoomCode.value.trim().toUpperCase();
       if (code.length !== 4) return alert('Enter a valid 4-character Room Code');
 
       btnJoin.disabled = true;
+      btnHost.disabled = true;
       btnJoin.textContent = 'Connecting...';
+      setStatus('Connecting to Host...', 'status-disconnected');
 
       isHost = false;
       document.querySelectorAll('.host-only').forEach(el => el.style.display = 'none');
 
+      if (peer) peer.destroy();
       peer = new Peer(peerConfig);
+
+      // 10-Second Connection Timeout Threshold
+      let connectionTimeout = setTimeout(() => {
+        if (btnJoin.disabled && !hostConn) {
+          alert('Connection timed out. Check the Room Code or ensure the Host is still online.');
+          btnJoin.disabled = false;
+          btnHost.disabled = false;
+          btnJoin.textContent = 'Join';
+          setStatus('Disconnected', 'status-disconnected');
+        }
+      }, 10000);
 
       peer.on('open', (id) => {
         console.log('Joining client initialized. Local Peer ID:', id);
         const targetHostId = 'trac4-' + code;
-        console.log('Attempting to connect to host:', targetHostId);
 
-        hostConn = peer.connect(targetHostId, { reliable: true });
+        hostConn = peer.connect(targetHostId, {
+          reliable: true,
+          serialization: 'json'
+        });
 
         hostConn.on('open', () => {
+          clearTimeout(connectionTimeout);
           console.log('Connected to host successfully!');
           roomCode = code;
           btnJoin.disabled = false;
           btnJoin.textContent = 'Join';
+          setStatus(`Connected to Room: ${code}`, 'status-connected');
         });
 
-        hostConn.on('data', (data) => handleNetworkMessage(data));
+        hostConn.on('data', (data) => {
+          handleNetworkMessage(data);
+        });
 
         hostConn.on('error', (err) => {
+          clearTimeout(connectionTimeout);
           console.error('Client Host Connection Error:', err);
           alert('Failed to connect to host: ' + err);
           btnJoin.disabled = false;
+          btnHost.disabled = false;
           btnJoin.textContent = 'Join';
+          setStatus('Disconnected', 'status-disconnected');
         });
 
         hostConn.on('close', () => {
@@ -440,620 +407,188 @@
       });
 
       peer.on('error', (err) => {
+        clearTimeout(connectionTimeout);
         console.error('PeerJS Client Error:', err);
-        alert('Connection Failed: Could not find room "' + code + '". Check code and try again.\n(' + err.type + ')');
+
+        if (err.type === 'peer-unavailable') {
+          alert(`Room "${code}" not found. Double-check the code or ensure the Host is actively online.`);
+        } else {
+          alert('Connection Failed (' + err.type + '). Please try again.');
+        }
+
         btnJoin.disabled = false;
+        btnHost.disabled = false;
         btnJoin.textContent = 'Join';
+        setStatus('Disconnected', 'status-disconnected');
       });
     });
 
-    function setupGameLobby() {
-      lobbyOverlay.style.display = 'none';
-      labelRoomCodes.forEach(el => el.textContent = roomCode);
-    }
+    // Handle Network Payloads
+    function handleNetworkMessage(msg, senderConn = null) {
+      if (!msg || !msg.type) return;
 
-    function broadcast(data) {
-      if (isHost) { connections.forEach(conn => conn.send(data)); }
-      else if (hostConn) { hostConn.send(data); }
-    }
-
-    function broadcastReadyState() {
-      if (!isHost) return;
-      const readyData = {
-        type: 'READY_UPDATE',
-        playerReadyMap: playerReadyMap,
-        rotationSpeed: rotationSpeed,
-        isRotating: isRotating,
-        selectedLevel: currentSelectedLevel,
-        cardPatterns: cardPatterns
-      };
-      broadcast(readyData);
-      updateReadyUI();
-      checkAllPlayersReady();
-    }
-
-    function checkAllPlayersReady() {
-      if (!isHost || gameWon) return;
-      const connectedPlayerIds = [1, ...connections.map((_, idx) => idx + 2)];
-      const allReady = connectedPlayerIds.every(id => playerReadyMap[id] === true);
-
-      if (allReady && !isRotating && connectedPlayerIds.length >= 1) {
-        isRotating = true;
-        broadcast({ type: 'START_ROTATION', isRotating: true, rotationSpeed: rotationSpeed });
-      }
-    }
-
-    function updateReadyUI() {
-      const connectedPlayerIds = Object.keys(playerReadyMap);
-      const readyCount = Object.values(playerReadyMap).filter(Boolean).length;
-      labelReadyCounts.forEach(el => {
-        el.textContent = `${readyCount}/${connectedPlayerIds.length} Ready`;
-      });
-
-      if (playerReadyMap[myPlayerId]) {
-        btnStart.classList.add('ready-active');
-        btnStart.textContent = 'Waiting for Others...';
-      } else {
-        btnStart.classList.remove('ready-active');
-        btnStart.textContent = 'Start (Ready)';
-      }
-    }
-
-    function handleNetworkMessage(data) {
-      switch (data.type) {
-        case 'WELCOME':
-          myPlayerId = data.playerId;
-          const pCol = PLAYER_COLORS[myPlayerId - 1];
-          labelMyPlayers.forEach(el => {
-            el.textContent = `Player ${myPlayerId} (${pCol.name})`;
-            el.style.color = pCol.hex;
-          });
-          setupGameLobby();
-          setCameraPerspective(myPlayerId);
-          applyGameState(data.gameState);
+      switch (msg.type) {
+        case 'SYNC_MAP':
+          hexData = msg.data;
+          drawMap();
           break;
 
-        case 'CUBE_FLIP':
-          if (!gameWon) {
-            applyCubeFlip(data.playerId, data.cubeIndex, data.newState);
-            checkWinCondition(data.playerId);
-            if (isHost) broadcast(data);
-          }
-          break;
-
-        case 'TOGGLE_READY':
+        case 'UPDATE_TILE':
+          hexData[msg.key] = msg.value;
+          drawMap();
+          // If host receives update from a client, broadcast to all other clients
           if (isHost) {
-            playerReadyMap[data.playerId] = data.isReady;
-            broadcastReadyState();
+            broadcastNetworkMessage(msg, senderConn);
           }
           break;
 
-        case 'READY_UPDATE':
-          playerReadyMap = data.playerReadyMap;
-          rotationSpeed = data.rotationSpeed;
-          isRotating = data.isRotating;
-          currentSelectedLevel = data.selectedLevel || currentSelectedLevel;
-          if (selectLevel) selectLevel.value = currentSelectedLevel;
-          if (data.cardPatterns) {
-            cardPatterns = data.cardPatterns;
-            updateAllTowerCardMeshes();
+        case 'CLEAR_MAP':
+          hexData = {};
+          drawMap();
+          if (isHost) {
+            broadcastNetworkMessage(msg, senderConn);
           }
-          updateReadyUI();
-          break;
-
-        case 'START_ROTATION':
-          isRotating = data.isRotating;
-          if (data.rotationSpeed) rotationSpeed = data.rotationSpeed;
-          if (isHost) broadcast(data);
-          break;
-
-        case 'NEW_GAME':
-          gameWon = false;
-          isRotating = false;
-          winBanner.style.display = 'none';
-          currentSelectedLevel = data.selectedLevel;
-          if (selectLevel) selectLevel.value = currentSelectedLevel;
-          cardPatterns = data.cardPatterns;
-          playerReadyMap = data.playerReadyMap;
-          updateAllTowerCardMeshes();
-          
-          if (data.cubeStates) {
-            Object.keys(data.cubeStates).forEach(key => {
-              const [pId, cIdx] = key.split('-').map(Number);
-              applyCubeFlip(pId, cIdx, data.cubeStates[key]);
-            });
-          }
-          updateReadyUI();
-          if (isHost) broadcast(data);
-          break;
-
-        case 'GAME_WON':
-          triggerWin(data.winnerId);
-          if (isHost) broadcast(data);
           break;
       }
     }
 
-    // --- 2. Three.js Scene Setup ---
-    const container = document.getElementById('canvas-container');
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f0f12);
-
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
-    function setCameraPerspective(pId) {
-      if (pId === 1) {
-        camera.position.set(0, 21.0, 29.0);
-        camera.lookAt(0, 3.5, -2.5);
-      } else if (pId === 2) {
-        camera.position.set(0, 22.5, -36.0);
-        camera.lookAt(0, 3.5, -5.5);
-      } else if (pId === 3) {
-        camera.position.set(-34.0, 21.0, -2.5);
-        camera.lookAt(0, 3.5, -2.5);
-      } else if (pId === 4) {
-        camera.position.set(34.0, 21.0, -2.5);
-        camera.lookAt(0, 3.5, -2.5);
-      }
-    }
-
-    setCameraPerspective(1);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight.position.set(15, 32, 18);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
-
-    const tableMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(42, 0.4, 42),
-      new THREE.MeshStandardMaterial({ color: 0x1e2124, roughness: 0.85 })
-    );
-    tableMesh.position.set(0, -0.2, 0);
-    scene.add(tableMesh);
-
-    function drawTilePattern(ctx, x, y, size, tileType) {
-      if (tileType === 0) { 
-        ctx.fillStyle = '#e63946'; 
-        ctx.fillRect(x, y, size, size); 
-      } else if (tileType === 1) { 
-        ctx.fillStyle = '#ffffff'; 
-        ctx.fillRect(x, y, size, size); 
-      } else if (tileType === 2) { 
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y); ctx.lineTo(x, y + size); ctx.closePath(); ctx.fillStyle = '#e63946'; ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x + size, y); ctx.lineTo(x + size, y + size); ctx.lineTo(x, y + size); ctx.closePath(); ctx.fillStyle = '#ffffff'; ctx.fill();
-      } else if (tileType === 3) { 
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y); ctx.lineTo(x, y + size); ctx.closePath(); ctx.fillStyle = '#ffffff'; ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x + size, y); ctx.lineTo(x + size, y + size); ctx.lineTo(x, y + size); ctx.closePath(); ctx.fillStyle = '#e63946'; ctx.fill();
-      } else if (tileType === 4) { 
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y + size); ctx.lineTo(x, y + size); ctx.closePath(); ctx.fillStyle = '#e63946'; ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y); ctx.lineTo(x + size, y + size); ctx.closePath(); ctx.fillStyle = '#ffffff'; ctx.fill();
-      } else if (tileType === 5) { 
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y); ctx.lineTo(x + size, y + size); ctx.closePath(); ctx.fillStyle = '#e63946'; ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + size, y + size); ctx.lineTo(x, y + size); ctx.closePath(); ctx.fillStyle = '#ffffff'; ctx.fill();
-      }
-      ctx.strokeStyle = '#111111'; ctx.lineWidth = 6; ctx.strokeRect(x, y, size, size);
-    }
-
-    function createCubeFaceTexture(tileType) {
-      const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
-      drawTilePattern(canvas.getContext('2d'), 0, 0, 128, tileType);
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-      return texture;
-    }
-
-    const tileTextures = [0, 1, 2, 3, 4, 5].map(type => createCubeFaceTexture(type));
-    const sideMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.8 });
-    
-    const cubeSize = 2.25736875;
-    const cubeHeight = 0.86680125;
-    const cubeGeo = new THREE.BoxGeometry(cubeSize, cubeHeight, cubeSize);
-
-    // --- 3. Barrel & Tower Dimensions ---
-    const plasticBlueMat = new THREE.MeshStandardMaterial({ color: 0x143472, roughness: 0.35, metalness: 0.05 });
-    const plasticRedMat = new THREE.MeshStandardMaterial({ color: 0xd92b2b, roughness: 0.3, metalness: 0.05 });
-
-    const TOWER_CENTER_X = 0.0;
-    const TOWER_CENTER_Z = -2.5;
-
-    const baseGroup = new THREE.Group();
-    baseGroup.position.set(TOWER_CENTER_X, 0, TOWER_CENTER_Z);
-
-    const pedestalBottom = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 4.2, 0.8, 32), plasticBlueMat);
-    pedestalBottom.position.y = 0.4;
-    baseGroup.add(pedestalBottom);
-
-    const pedestalMid = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 3.2, 1.2, 32), plasticBlueMat);
-    pedestalMid.position.y = 1.4;
-    baseGroup.add(pedestalMid);
-
-    const redStemCollar = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 1.5, 0.8, 32), plasticRedMat);
-    redStemCollar.position.y = 2.4;
-    baseGroup.add(redStemCollar);
-
-    scene.add(baseGroup);
-
-    const rotatingBarrelGroup = new THREE.Group();
-    rotatingBarrelGroup.position.set(TOWER_CENTER_X, 2.8, TOWER_CENTER_Z);
-
-    const cardWidth = 7.25;      
-    const cardHeight = 9.0625;    
-    const barrelHeight = 10.8;  
-
-    const origCardWidth = 5.8;
-    const topFaceWidth = origCardWidth * 1.25;  
-    const baseFaceWidth = origCardWidth * 1.50; 
-
-    const topRadius = topFaceWidth / Math.SQRT2;   
-    const baseRadius = baseFaceWidth / Math.SQRT2; 
-
-    const barrelGeo = new THREE.CylinderGeometry(topRadius, baseRadius, barrelHeight, 64);
-    const posAttr = barrelGeo.attributes.position;
-    
-    for (let i = 0; i < posAttr.count; i++) {
-      let x = posAttr.getX(i);
-      let z = posAttr.getZ(i);
-      let r = Math.hypot(x, z);
-      if (r > 0.001) {
-        let angle = Math.atan2(z, x);
-        let cos = Math.cos(angle);
-        let sin = Math.sin(angle);
-        let squircleFactor = 1 / Math.pow(Math.pow(Math.abs(cos), 4) + Math.pow(Math.abs(sin), 4), 0.25);
-        posAttr.setX(i, x * squircleFactor);
-        posAttr.setZ(i, z * squircleFactor);
-      }
-    }
-    barrelGeo.computeVertexNormals();
-
-    const barrelMesh = new THREE.Mesh(barrelGeo, plasticBlueMat);
-    barrelMesh.position.y = barrelHeight / 2;
-    rotatingBarrelGroup.add(barrelMesh);
-
-    const dialRadius = 1.697 * 1.5 * 1.8 * 0.7; 
-    const dialHeight = 0.135;                    
-
-    const timerDialMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(dialRadius, dialRadius, dialHeight, 32),
-      plasticRedMat
-    );
-    timerDialMesh.position.y = barrelHeight + 0.1 + (dialHeight / 2);
-    rotatingBarrelGroup.add(timerDialMesh);
-
-    const exactMidpointRadius = (topRadius + baseRadius) / 2;
-    const zPadding = 0.05; 
-    const faceDistOffset = exactMidpointRadius + zPadding; 
-    const slopeAngle = Math.atan2(baseRadius - topRadius, barrelHeight);
-    
-    const cardCanvases = [];
-    const cardTextures = [];
-
-    const cardinalYRotations = [0, Math.PI, Math.PI / 2, -Math.PI / 2];
-    const barrelFacePlayerMap = [0, 1, 3, 2];
-
-    cardinalYRotations.forEach((yAngle) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1000; canvas.height = 1250; 
-      const texture = new THREE.CanvasTexture(canvas);
-      
-      cardCanvases.push(canvas);
-      cardTextures.push(texture);
-
-      const cardPivotGroup = new THREE.Group();
-      cardPivotGroup.rotation.y = yAngle;
-
-      const cardMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(cardWidth, cardHeight),
-        new THREE.MeshStandardMaterial({ 
-          map: texture, 
-          roughness: 0.15, 
-          side: THREE.DoubleSide
-        })
-      );
-
-      cardMesh.position.set(0, barrelHeight / 2, faceDistOffset);
-      cardMesh.rotation.x = -slopeAngle; 
-      cardPivotGroup.add(cardMesh);
-      rotatingBarrelGroup.add(cardPivotGroup);
-    });
-
-    scene.add(rotatingBarrelGroup);
-
-    function updateAllTowerCardMeshes() {
-      cardCanvases.forEach((canvas, faceIdx) => {
-        const pIdx = barrelFacePlayerMap[faceIdx];
-        const ctx = canvas.getContext('2d');
-        const pCol = PLAYER_COLORS[pIdx];
-        
-        ctx.fillStyle = pCol.hex;
-        ctx.fillRect(0, 0, 1000, 1250);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(40, 40, 920, 920);
-
-        const tileSize = 230; 
-        const startX = 40;
-        const startY = 40;
-        const cardPatternData = cardPatterns[pIdx];
-
-        for (let r = 0; r < 4; r++) {
-          for (let c = 0; c < 4; c++) {
-            const idx = r * 4 + c;
-            drawTilePattern(ctx, startX + c * tileSize, startY + r * tileSize, tileSize, cardPatternData[idx]);
-          }
+    function broadcastNetworkMessage(msg, excludeConn = null) {
+      clientConns.forEach(conn => {
+        if (conn !== excludeConn && conn.open) {
+          conn.send(msg);
         }
-
-        ctx.fillStyle = pCol.hex;
-        ctx.fillRect(0, 1000, 1000, 250);
-
-        ctx.fillStyle = (pIdx === 2) ? '#000000' : '#ffffff';
-        ctx.font = 'bold 64px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${pCol.name.toUpperCase()}  •  LEVEL ${currentSelectedLevel}`, 500, 1150);
-
-        cardTextures[faceIdx].needsUpdate = true;
       });
     }
 
-    function loadGameCardsForLevel(lvl) {
-      const levelMap = masterCardCatalog[lvl] || masterCardCatalog[4];
-      cardPatterns = [
-        levelMap[0][Math.floor(Math.random() * levelMap[0].length)],
-        levelMap[1][Math.floor(Math.random() * levelMap[1].length)],
-        levelMap[2][Math.floor(Math.random() * levelMap[2].length)],
-        levelMap[3][Math.floor(Math.random() * levelMap[3].length)]
-      ];
-      updateAllTowerCardMeshes();
-    }
-
-    loadGameCardsForLevel(currentSelectedLevel);
-
-    // --- 4. Player Trays ---
-    const allCubes = {};
-    const playerConfigs = [
-      { id: 1, pos: [0, 0, 8.25], rotY: 0 },         
-      { id: 2, pos: [0, 0, -13.25], rotY: Math.PI },   
-      { id: 3, pos: [-10.5, 0, -2.5], rotY: Math.PI / 2 }, 
-      { id: 4, pos: [10.5, 0, -2.5], rotY: -Math.PI / 2 }  
-    ];
-
-    const trayInnerWidth = 8.6625;
-    const cubeSpacing = (trayInnerWidth - cubeSize) / 3;
-    const trayStartOffset = -trayInnerWidth / 2 + cubeSize / 2;
-
-    playerConfigs.forEach(pCfg => {
-      const pColor = PLAYER_COLORS[pCfg.id - 1];
-      const trayGroup = new THREE.Group();
-      trayGroup.position.set(...pCfg.pos);
-      trayGroup.rotation.y = pCfg.rotY;
-
-      const trayBase = new THREE.Mesh(
-        new THREE.BoxGeometry(9.45, 0.65625, 9.45),
-        new THREE.MeshStandardMaterial({ color: pColor.hexNum, roughness: 0.4 })
-      );
-      trayBase.position.y = 0.328125;
-      trayGroup.add(trayBase);
-
-      const trayInner = new THREE.Mesh(
-        new THREE.BoxGeometry(trayInnerWidth, 0.13125, trayInnerWidth),
-        new THREE.MeshStandardMaterial({ color: 0x111115, roughness: 0.9 })
-      );
-      trayInner.position.y = 0.65625;
-      trayGroup.add(trayInner);
-
-      let cubeIdx = 0;
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-          const idx = cubeIdx++;
-          const randomInitialState = Math.floor(Math.random() * 6);
-          
-          const materials = [
-            sideMat, sideMat,
-            new THREE.MeshStandardMaterial({ map: tileTextures[randomInitialState], roughness: 0.3 }),
-            sideMat, sideMat, sideMat
-          ];
-          const cube = new THREE.Mesh(cubeGeo, materials);
-          const posX = trayStartOffset + c * cubeSpacing;
-          const posZ = trayStartOffset + r * cubeSpacing;
-          cube.position.set(posX, 0.65625 + cubeHeight / 2, posZ);
-          cube.userData = { playerId: pCfg.id, cubeIndex: idx, state: randomInitialState };
-          trayGroup.add(cube);
-
-          allCubes[`${pCfg.id}-${idx}`] = cube;
-        }
+    function sendNetworkMessage(msg) {
+      if (isHost) {
+        broadcastNetworkMessage(msg);
+      } else if (hostConn && hostConn.open) {
+        hostConn.send(msg);
       }
-      scene.add(trayGroup);
-    });
-
-    function randomizeAllCubes() {
-      const cubeStates = {};
-      Object.keys(allCubes).forEach(key => {
-        const [pId, cIdx] = key.split('-').map(Number);
-        const randomState = Math.floor(Math.random() * 6);
-        applyCubeFlip(pId, cIdx, randomState);
-        cubeStates[key] = randomState;
-      });
-      return cubeStates;
     }
 
-    // --- 5. Game Logic & Win Validation ---
-    function getGameState() {
-      const state = { isRotating, rotationSpeed, cardPatterns, currentSelectedLevel, gameWon, playerReadyMap, cubes: {} };
-      Object.keys(allCubes).forEach(key => { state.cubes[key] = allCubes[key].userData.state; });
-      return state;
-    }
-
-    function applyGameState(state) {
-      isRotating = state.isRotating || false;
-      rotationSpeed = state.rotationSpeed || 0.01047;
-      currentSelectedLevel = state.currentSelectedLevel || 4;
-      if (selectLevel) selectLevel.value = currentSelectedLevel;
-      gameWon = state.gameWon || false;
-      playerReadyMap = state.playerReadyMap || playerReadyMap;
-      cardPatterns = state.cardPatterns || cardPatterns;
-      updateAllTowerCardMeshes();
-      updateReadyUI();
-
-      if (state.cubes) {
-        Object.keys(state.cubes).forEach(key => {
-          const [pId, cIdx] = key.split('-').map(Number);
-          applyCubeFlip(pId, cIdx, state.cubes[key]);
+    // --- Hex Grid Geometry Helpers ---
+    function getHexCorners(center) {
+      let corners = [];
+      for (let i = 0; i < 6; i++) {
+        let angleDeg = 60 * i - 30; // Pointy-topped hexes
+        let angleRad = Math.PI / 180 * angleDeg;
+        corners.push({
+          x: center.x + HEX_RADIUS * Math.cos(angleRad),
+          y: center.y + HEX_RADIUS * Math.sin(angleRad)
         });
       }
+      return corners;
     }
 
-    function applyCubeFlip(playerId, cubeIndex, newState) {
-      const key = `${playerId}-${cubeIndex}`;
-      if (allCubes[key]) {
-        allCubes[key].userData.state = newState;
-        allCubes[key].material[2].map = tileTextures[newState];
-        allCubes[key].material[2].needsUpdate = true;
+    function getHexCenter(col, row) {
+      let width = Math.sqrt(3) * HEX_RADIUS;
+      let height = 2 * HEX_RADIUS;
+      let x = col * width + (row % 2) * (width / 2) + cameraOffset.x + canvas.width / 2 - 300;
+      let y = row * (height * 0.75) + cameraOffset.y + canvas.height / 2 - 200;
+      return { x, y };
+    }
+
+    function pixelToHex(x, y) {
+      // Approximate hex picker for grid selection
+      let width = Math.sqrt(3) * HEX_RADIUS;
+      let height = 2 * HEX_RADIUS;
+
+      let adjustedX = x - (cameraOffset.x + canvas.width / 2 - 300);
+      let adjustedY = y - (cameraOffset.y + canvas.height / 2 - 200);
+
+      let row = Math.round(adjustedY / (height * 0.75));
+      let col = Math.round((adjustedX - (row % 2) * (width / 2)) / width);
+
+      return { col, row };
+    }
+
+    // --- Canvas Rendering ---
+    function drawHex(center, color = '#222222', strokeColor = '#444444') {
+      let corners = getHexCorners(center);
+
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y);
+      for (let i = 1; i < 6; i++) {
+        ctx.lineTo(corners[i].x, corners[i].y);
       }
+      ctx.closePath();
+
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
-    function checkWinCondition(pId) {
-      if (gameWon) return;
+    function drawMap() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const targetPattern = cardPatterns[pId - 1];
-      let isMatch = true;
+      for (let r = 0; r < MAP_HEIGHT; r++) {
+        for (let c = 0; c < MAP_WIDTH; c++) {
+          let center = getHexCenter(c, r);
+          let key = `${c},${r}`;
+          let tile = hexData[key];
+          let color = (tile && tile.terrainColor) ? tile.terrainColor : '#222222';
 
-      for (let i = 0; i < 16; i++) {
-        const cubeKey = `${pId}-${i}`;
-        if (allCubes[cubeKey].userData.state !== targetPattern[i]) {
-          isMatch = false;
-          break;
+          drawHex(center, color);
         }
       }
+    }
 
-      if (isMatch) {
-        triggerWin(pId);
-        broadcast({ type: 'GAME_WON', winnerId: pId });
+    // --- User Interaction ---
+    container.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      if (toolSelect.value === 'select' || e.button === 1) { // Middle click or select mode
+        isDragging = true;
+        dragStart = { x: e.clientX - cameraOffset.x, y: e.clientY - cameraOffset.y };
+        return;
       }
-    }
 
-    function triggerWin(winnerId) {
-      gameWon = true;
-      isRotating = false;
-      const winnerColor = PLAYER_COLORS[winnerId - 1];
-      
-      winBanner.textContent = `PLAYER ${winnerId} (${winnerColor.name.toUpperCase()}) WINS! 🏆`;
-      winBanner.style.backgroundColor = winnerColor.hex;
-      winBanner.style.color = (winnerId === 2 || winnerId === 3) ? '#000' : '#fff';
-      winBanner.style.display = 'block';
-    }
+      const { col, row } = pixelToHex(mouseX, mouseY);
+      if (col >= 0 && col < MAP_WIDTH && row >= 0 && row < MAP_HEIGHT) {
+        const key = `${col},${row}`;
 
-    // --- 6. Interaction Controls ---
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    window.addEventListener('pointerdown', (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || gameWon) return;
-
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(Object.values(allCubes));
-
-      if (intersects.length > 0) {
-        const clicked = intersects[0].object;
-
-        if (clicked.userData.playerId === myPlayerId) {
-          const nextState = (clicked.userData.state + 1) % 6;
-          applyCubeFlip(clicked.userData.playerId, clicked.userData.cubeIndex, nextState);
-
-          broadcast({
-            type: 'CUBE_FLIP',
-            playerId: clicked.userData.playerId,
-            cubeIndex: clicked.userData.cubeIndex,
-            newState: nextState
-          });
-
-          checkWinCondition(myPlayerId);
+        if (toolSelect.value === 'paint') {
+          const color = terrainSelect.value;
+          hexData[key] = { terrainColor: color };
+          drawMap();
+          sendNetworkMessage({ type: 'UPDATE_TILE', key: key, value: hexData[key] });
+        } else if (toolSelect.value === 'clear') {
+          delete hexData[key];
+          drawMap();
+          sendNetworkMessage({ type: 'UPDATE_TILE', key: key, value: null });
         }
       }
     });
 
-    btnStart.addEventListener('click', () => {
-      if (gameWon) return;
-      const isCurrentlyReady = !!playerReadyMap[myPlayerId];
-      const nextReady = !isCurrentlyReady;
-
-      if (isHost) {
-        playerReadyMap[myPlayerId] = nextReady;
-        broadcastReadyState();
-      } else {
-        broadcast({ type: 'TOGGLE_READY', playerId: myPlayerId, isReady: nextReady });
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        cameraOffset.x = e.clientX - dragStart.x;
+        cameraOffset.y = e.clientY - dragStart.y;
+        drawMap();
       }
     });
 
-    selectSpeed.addEventListener('change', (e) => {
-      if (!isHost) return;
-      rotationSpeed = parseFloat(e.target.value);
-      broadcastReadyState();
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
     });
 
-    selectLevel.addEventListener('change', (e) => {
+    btnClearMap.addEventListener('click', () => {
       if (!isHost) return;
-      currentSelectedLevel = parseInt(e.target.value);
-      loadGameCardsForLevel(currentSelectedLevel);
-      broadcastReadyState();
-    });
-
-    document.getElementById('btn-host-new-game').addEventListener('click', () => {
-      if (!isHost) return;
-      gameWon = false;
-      isRotating = false;
-      winBanner.style.display = 'none';
-
-      currentSelectedLevel = parseInt(selectLevel.value);
-      loadGameCardsForLevel(currentSelectedLevel);
-      const newCubeStates = randomizeAllCubes();
-
-      Object.keys(playerReadyMap).forEach(id => playerReadyMap[id] = false);
-
-      const newGameData = {
-        type: 'NEW_GAME',
-        selectedLevel: currentSelectedLevel,
-        cardPatterns: cardPatterns,
-        playerReadyMap: playerReadyMap,
-        cubeStates: newCubeStates
-      };
-      
-      broadcast(newGameData);
-      updateReadyUI();
-      if (isHost) broadcast(newGameData);
-    });
-
-    // --- 7. Animation Loop ---
-    function animate() {
-      requestAnimationFrame(animate);
-
-      if (isRotating && !gameWon) {
-        rotatingBarrelGroup.rotation.y += rotationSpeed;
-
-        if (Math.abs(rotatingBarrelGroup.rotation.y - lastSoundAngle) >= 0.12) {
-          playRatchetClick();
-          lastSoundAngle = rotatingBarrelGroup.rotation.y;
-        }
+      if (confirm('Are you sure you want to clear the whole map?')) {
+        hexData = {};
+        drawMap();
+        sendNetworkMessage({ type: 'CLEAR_MAP' });
       }
-
-      renderer.render(scene, camera);
-    }
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateMatrix();
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    animate();
+    // --- Initial Setup ---
+    resizeCanvas();
   </script>
 </body>
 </html>
